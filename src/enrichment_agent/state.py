@@ -6,24 +6,60 @@ data model used internally by the graph.
 
 import operator
 from dataclasses import dataclass, field
-from typing import Annotated, Any, List, Optional
-
+from typing import Annotated, Any, Dict, List, Optional
+from pydantic import BaseModel
 from langchain_core.messages import BaseMessage
 from langgraph.graph import add_messages
 
+def add_results(existing_results: List[Dict[str, Any]], new_results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Custom reducer for search results that only appends unique results based on URL.
+    
+    Args:
+        existing_results: The existing list of search results
+        new_results: The new list of search results to add
+        
+    Returns:
+        A new list containing both existing results and new unique results
+    """
+    if not new_results:
+        return existing_results
+
+    # Create a set of existing URLs for faster lookup
+    existing_urls = {result.get("url", "") for result in existing_results}
+    
+
+    # Only append results with URLs not already in the existing results
+    result = existing_results.copy()
+    for item in new_results:
+        url = item.get("url", "")
+        if url and url not in existing_urls:
+            result.append(item)
+            existing_urls.add(url)
+    
+    return result
 
 @dataclass(kw_only=True)
 class InputState:
     """Input state defines the interface between the graph and the user (external API)."""
+    company_name: str
+    company_info: str
+    procurement_requirement: str
 
-    topic: str
-    "The topic for which the agent is tasked to gather information."
+@dataclass(kw_only=True)
+class ContactDetails(BaseModel):
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    website: Optional[str] = None
+    address: Optional[str] = None
 
-    extraction_schema: dict[str, Any]
-    "The json schema defines the information the agent is tasked with filling out."
+@dataclass(kw_only=True)
+class Supplier(BaseModel):
+    name: str
+    description: str
+    standards_compliance: str
+    certifications: str
+    contact_details: ContactDetails = field(default_factory=ContactDetails)
 
-    info: Optional[dict[str, Any]] = field(default=None)
-    "The info state tracks the current extracted data for the given topic, conforming to the provided schema. This is primarily populated by the agent."
 
 
 @dataclass(kw_only=True)
@@ -67,12 +103,36 @@ class State(InputState):
         """
 
     loop_step: Annotated[int, operator.add] = field(default=0)
+    
+    # Add info attribute to store the extracted information
+    info: Optional[Dict[str, Any]] = field(default=None)
 
+    queries: Optional[List[str]] = field(default=None) 
+
+    search_results: Annotated[List[Dict[str, Any]], operator.add] = field(default_factory=list)
+
+    suppliers: Annotated[List[Supplier], operator.add] = field(default_factory=list)
     # Feel free to add additional attributes to your state as needed.
     # Common examples include retrieved documents, extracted entities, API connections, etc.
 
+@dataclass(kw_only=True)
+class ResultState(BaseModel):
+    """A search result."""
+    search_result: Dict[str, Any]
 
 @dataclass(kw_only=True)
+class Queries(BaseModel):
+    """A search result."""
+    queries: List[str]
+
+@dataclass(kw_only=True)
+class SearchState(BaseModel):
+    """A search query"""
+    query: str
+
+
+
+
 class OutputState:
     """The response object for the end user.
 

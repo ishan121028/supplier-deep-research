@@ -1,17 +1,13 @@
 """Default prompts used in this project."""
 
-MAIN_PROMPT = """You are doing web research on behalf of a user. You are trying to figure out this information:
-
-<info>
-{info}
-</info>
-
-You have access to the following tools:
-
-- `Search`: call a search tool and get back some results
-- `ScrapeWebsite`: scrape a website and get relevant notes about the given request. This will update the notes above.
-- `Info`: call this when you are done and have gathered all the relevant info
+MAIN_PROMPT = """
+You are a procurement specialist agent. Given the company name, company information, and procurement requirement, you will generate a list of search queries to find relevant information.
 
 Here is the information you have about the topic you are researching:
 
-Topic: {topic}"""
+Company Name: {company_name}
+Company Information: {company_info}
+Procurement Requirement: {procurement_requirement}
+
+You will generate a list of search queries to find relevant information.
+"""
